@@ -6,142 +6,174 @@ import { Header } from '@/components/Header';
 import { ProfileCard } from '@/components/ProfileCard';
 import { MatchButton } from '@/components/MatchButton';
 import { User, Match } from '@/lib/types';
-import { calculateMatchScore, generateVideoCallLink } from '@/lib/utils';
-import { generateConversationStarters } from '@/lib/api';
-import { Coffee, Users, Settings, Plus } from 'lucide-react';
-
-// Mock data for demonstration
-const mockUsers: User[] = [
-  {
-    userId: '1',
-    telegramId: '123456789',
-    xHandle: 'techfounder',
-    displayName: 'Alex Chen',
-    bio: 'Full-stack developer passionate about React, AI, and building great products.',
-    extractedInterests: ['React', 'AI', 'Startups', 'Product Design', 'TypeScript'],
-    preferences: { industries: ['Technology'], meetingDuration: 30 },
-    timezone: 'America/Los_Angeles',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    userId: '2',
-    telegramId: '987654321',
-    xHandle: 'designguru',
-    displayName: 'Sarah Kim',
-    bio: 'UX Designer helping startups create beautiful, user-centered products.',
-    extractedInterests: ['UX Design', 'Product Design', 'Startups', 'Figma', 'User Research'],
-    preferences: { industries: ['Design', 'Technology'], meetingDuration: 45 },
-    timezone: 'America/New_York',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    userId: '3',
-    telegramId: '456789123',
-    xHandle: 'airesearcher',
-    displayName: 'Dr. Michael Zhang',
-    bio: 'AI researcher exploring the intersection of machine learning and human creativity.',
-    extractedInterests: ['Machine Learning', 'AI', 'Research', 'Python', 'Deep Learning'],
-    preferences: { industries: ['Research', 'Technology'], meetingDuration: 60 },
-    timezone: 'America/Chicago',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    userId: '4',
-    telegramId: '789123456',
-    xHandle: 'marketingpro',
-    displayName: 'Emma Rodriguez',
-    bio: 'Growth marketer helping B2B SaaS companies scale through data-driven strategies.',
-    extractedInterests: ['Growth Marketing', 'SaaS', 'Analytics', 'B2B', 'Strategy'],
-    preferences: { industries: ['Marketing', 'SaaS'], meetingDuration: 30 },
-    timezone: 'Europe/London',
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+import { Coffee, Users, Settings, Plus, Loader2 } from 'lucide-react';
 
 export default function HomePage() {
   const { context } = useMiniKit();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [potentialMatches, setPotentialMatches] = useState<User[]>([]);
+  const [userMatches, setUserMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'discover' | 'matches' | 'profile'>('discover');
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
+  // Authenticate user on mount
   useEffect(() => {
-    // Simulate loading user data
-    setTimeout(() => {
-      // In a real app, this would fetch the current user's data
-      const mockCurrentUser: User = {
-        userId: 'current',
-        telegramId: context?.user?.id || 'unknown',
-        displayName: context?.user?.displayName || 'You',
-        extractedInterests: ['React', 'TypeScript', 'Product Design', 'Startups'],
-        preferences: { meetingDuration: 30 },
-        timezone: 'America/Los_Angeles',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      
-      setCurrentUser(mockCurrentUser);
-      setPotentialMatches(mockUsers);
-      setLoading(false);
-    }, 1000);
+    const authenticateUser = async () => {
+      if (!context?.user?.id) return;
+
+      try {
+        const response = await fetch('/api/auth/user', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            telegramId: context.user.id,
+            initData: context.initData || '',
+            userData: {
+              displayName: context.user.displayName,
+            },
+          }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setAuthToken(data.token);
+          setCurrentUser(data.user);
+        }
+      } catch (error) {
+        console.error('Authentication error:', error);
+      }
+    };
+
+    authenticateUser();
   }, [context]);
 
+  // Load data when authenticated
+  useEffect(() => {
+    if (!authToken) return;
+
+    const loadData = async () => {
+      try {
+        setLoading(true);
+
+        // Load recommendations
+        const recommendationsResponse = await fetch('/api/matches?action=recommendations', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+          },
+        });
+
+        const recommendationsData = await recommendationsResponse.json();
+        if (recommendationsData.success) {
+          setPotentialMatches(recommendationsData.recommendations.map((r: any) => r.user));
+        }
+
+        // Load user matches
+        const matchesResponse = await fetch('/api/matches', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+          },
+        });
+
+        const matchesData = await matchesResponse.json();
+        if (matchesData.success) {
+          setUserMatches(matchesData.matches);
+        }
+
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [authToken]);
+
   const handleRequestMatch = async (targetUser: User) => {
-    if (!currentUser) return;
+    if (!currentUser || !authToken) return;
 
     try {
-      setLoading(true);
-      
-      // Calculate match score
-      const matchScore = calculateMatchScore(
-        currentUser.extractedInterests,
-        targetUser.extractedInterests
-      );
+      setActionLoading(true);
 
-      // Generate conversation starters
-      const conversationStarters = await generateConversationStarters(
-        currentUser.extractedInterests,
-        targetUser.extractedInterests
-      );
+      const response = await fetch('/api/matches', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({
+          targetUserId: targetUser.userId,
+        }),
+      });
 
-      // Create match (in a real app, this would be an API call)
-      const newMatch: Match = {
-        matchId: `match_${Date.now()}`,
-        user1Id: currentUser.userId,
-        user2Id: targetUser.userId,
-        matchScore,
-        status: 'pending',
-        conversationStarters,
-        createdAt: new Date(),
-      };
+      const data = await response.json();
+      if (data.success) {
+        // Remove the matched user from potential matches
+        setPotentialMatches(prev => prev.filter(user => user.userId !== targetUser.userId));
+        alert(`Coffee chat requested with ${targetUser.displayName || targetUser.xHandle}! They'll be notified.`);
+      } else {
+        alert('Failed to request match. Please try again.');
+      }
 
-      console.log('Match requested:', newMatch);
-      
-      // Remove the matched user from potential matches
-      setPotentialMatches(prev => prev.filter(user => user.userId !== targetUser.userId));
-      
-      // Show success message (in a real app, this would be a toast notification)
-      alert(`Coffee chat requested with ${targetUser.displayName}! They'll be notified.`);
-      
     } catch (error) {
       console.error('Error requesting match:', error);
       alert('Failed to request match. Please try again.');
     } finally {
-      setLoading(false);
+      setActionLoading(false);
     }
   };
 
-  const handleConnectX = () => {
-    // In a real app, this would initiate X OAuth flow
-    alert('X OAuth integration would be implemented here');
+  const handleConnectX = async () => {
+    if (!authToken) return;
+
+    try {
+      const response = await fetch('/api/auth/twitter', {
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        window.location.href = data.authUrl;
+      } else {
+        alert('Failed to initiate X connection. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error connecting to X:', error);
+      alert('Failed to connect to X. Please try again.');
+    }
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-text-secondary">Loading your coffee connections...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-bg flex items-center justify-center">
+        <div className="card text-center py-8 max-w-sm">
+          <Coffee className="w-12 h-12 text-text-secondary mx-auto mb-4" />
+          <h3 className="font-medium text-text-primary mb-2">
+            Welcome to CircleUp
+          </h3>
+          <p className="text-text-secondary text-sm mb-4">
+            Connect your Telegram account to get started with professional networking.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -203,8 +235,9 @@ export default function HomePage() {
                   user={user}
                   variant="detailed"
                   onAction={() => handleRequestMatch(user)}
-                  actionLabel="Request Coffee Chat"
+                  actionLabel={actionLoading ? "Requesting..." : "Request Coffee Chat"}
                   actionVariant="accent"
+                  disabled={actionLoading}
                 />
               ))}
             </div>
@@ -223,21 +256,78 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="card text-center py-8">
-            <Users className="w-12 h-12 text-text-secondary mx-auto mb-4" />
-            <h3 className="font-medium text-text-primary mb-2">
-              No matches yet
-            </h3>
-            <p className="text-text-secondary text-sm mb-4">
-              Start discovering and requesting coffee chats!
-            </p>
-            <button
-              onClick={() => setActiveTab('discover')}
-              className="btn-primary"
-            >
-              Find Coffee Buddies
-            </button>
-          </div>
+          {userMatches.length === 0 ? (
+            <div className="card text-center py-8">
+              <Users className="w-12 h-12 text-text-secondary mx-auto mb-4" />
+              <h3 className="font-medium text-text-primary mb-2">
+                No matches yet
+              </h3>
+              <p className="text-text-secondary text-sm mb-4">
+                Start discovering and requesting coffee chats!
+              </p>
+              <button
+                onClick={() => setActiveTab('discover')}
+                className="btn-primary"
+              >
+                Find Coffee Buddies
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {userMatches.map((match) => {
+                const otherUser = match.initiator.userId === currentUser.userId
+                  ? match.recipient
+                  : match.initiator;
+
+                return (
+                  <div key={match.matchId} className="card">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm">
+                            {otherUser.displayName?.charAt(0) || otherUser.xHandle?.charAt(0) || 'U'}
+                          </span>
+                        </div>
+                        <div>
+                          <h3 className="font-medium text-text-primary">
+                            {otherUser.displayName || otherUser.xHandle || 'Anonymous'}
+                          </h3>
+                          <p className="text-xs text-text-secondary">
+                            Match Score: {match.matchScore}%
+                          </p>
+                          <p className="text-xs text-text-secondary capitalize">
+                            Status: {match.status}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        {match.status === 'pending' && match.recipient.userId === currentUser.userId && (
+                          <div className="flex gap-2">
+                            <button className="btn-secondary text-xs px-3 py-1">
+                              Decline
+                            </button>
+                            <button className="btn-primary text-xs px-3 py-1">
+                              Accept
+                            </button>
+                          </div>
+                        )}
+                        {match.status === 'accepted' && (
+                          <button className="btn-accent text-xs px-3 py-1">
+                            Schedule
+                          </button>
+                        )}
+                        {match.status === 'scheduled' && match.scheduledTime && (
+                          <div className="text-xs text-text-secondary">
+                            {new Date(match.scheduledTime).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -252,21 +342,21 @@ export default function HomePage() {
             </p>
           </div>
 
-          {currentUser ? (
-            <ProfileCard
-              user={currentUser}
-              variant="detailed"
-            />
-          ) : (
-            <div className="card text-center py-8">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Plus className="w-8 h-8 text-white" />
+          <ProfileCard
+            user={currentUser}
+            variant="detailed"
+          />
+
+          {!currentUser.xHandle && (
+            <div className="card text-center py-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Plus className="w-6 h-6 text-white" />
               </div>
               <h3 className="font-medium text-text-primary mb-2">
-                Complete Your Profile
+                Connect Your X Account
               </h3>
               <p className="text-text-secondary text-sm mb-4">
-                Connect your X account to get started with personalized matches
+                Get personalized matches based on your professional interests
               </p>
               <button
                 onClick={handleConnectX}

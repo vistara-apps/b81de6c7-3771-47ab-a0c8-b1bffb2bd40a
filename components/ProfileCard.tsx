@@ -10,14 +10,16 @@ interface ProfileCardProps {
   onAction?: () => void;
   actionLabel?: string;
   actionVariant?: 'primary' | 'secondary' | 'accent';
+  disabled?: boolean;
 }
 
-export function ProfileCard({ 
-  user, 
+export function ProfileCard({
+  user,
   variant = 'compact',
   onAction,
   actionLabel,
-  actionVariant = 'primary'
+  actionVariant = 'primary',
+  disabled = false
 }: ProfileCardProps) {
   const buttonClass = {
     primary: 'btn-primary',
@@ -81,7 +83,8 @@ export function ProfileCard({
           {onAction && actionLabel && (
             <button
               onClick={onAction}
-              className={`w-full ${buttonClass} text-sm`}
+              disabled={disabled}
+              className={`w-full ${buttonClass} text-sm ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {actionLabel}
             </button>

@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String   @id @default(cuid())
+  telegramId        String   @unique
+  xProfileUrl       String?
+  xHandle           String?
+  displayName       String?
+  bio               String?
+  profilePicture    String?
+  extractedInterests String[] // JSON array of interests
+  preferences       UserPreferences?
+  timezone          String   @default("America/Los_Angeles")
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  initiatedMatches  Match[]  @relation("InitiatedMatches")
+  receivedMatches   Match[]  @relation("ReceivedMatches")
+  payments          Payment[]
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model UserPreferences {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  industries        String[] // JSON array
+  skills            String[] // JSON array
+  topics            String[] // JSON array
+  meetingDuration   Int      @default(30) // in minutes
+  availableDays     String[] // JSON array of day names
+  availableHours    Json?    // { start: string, end: string }
+  notifications     Boolean  @default(true)
+  privacyLevel      String   @default("public") // public, contacts, private
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Match {
+  id                String   @id @default(cuid())
+  user1Id           String
+  user2Id           String
+  matchScore        Float
+  status            MatchStatus @default(pending)
+  scheduledTime     DateTime?
+  videoCallLink     String?
+  conversationStarters String[] // JSON array
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  initiator         User     @relation("InitiatedMatches", fields: [user1Id], references: [id])
+  recipient         User     @relation("ReceivedMatches", fields: [user2Id], references: [id])
+
+  @@unique([user1Id, user2Id])
+  @@map("matches")
+}
+
+model Payment {
+  id                String   @id @default(cuid())
+  userId            String
+  amount            Float
+  currency          String   @default("USD")
+  type              PaymentType
+  status            PaymentStatus @default(pending)
+  stripePaymentId   String?
+  description       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+model Notification {
+  id                String   @id @default(cuid())
+  userId            String
+  type              NotificationType
+  title             String
+  message           String
+  isRead            Boolean  @default(false)
+  data              Json?    // Additional data for the notification
+  createdAt         DateTime @default(now())
+
+  // Relations
+  user              User     @relation(fields: [userId], references: [id])
+
+  @@map("notifications")
+}
+
+enum MatchStatus {
+  pending
+  accepted
+  declined
+  scheduled
+  completed
+  cancelled
+}
+
+enum PaymentType {
+  match_unlock
+  premium_subscription
+  advanced_filters
+}
+
+enum PaymentStatus {
+  pending
+  completed
+  failed
+  refunded
+}
+
+enum NotificationType {
+  match_request
+  match_accepted
+  match_declined
+  meeting_scheduled
+  meeting_reminder
+  payment_success
+  payment_failed
+}
