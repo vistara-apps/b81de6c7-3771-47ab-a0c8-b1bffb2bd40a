@@ -5,7 +5,12 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'CircleUp - Professional Coffee Connections',
   description: 'Serendipitous professional connections, brewed over virtual coffee.',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -17,7 +22,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Providers>
-          <main className="min-h-screen bg-bg">
+          <main className="min-h-screen bg-[hsl(210,35%,95%)]">
             {children}
           </main>
         </Providers>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useMiniKit } from '@coinbase/minikit';
 import { Header } from '@/components/Header';
 import { ProfileCard } from '@/components/ProfileCard';
 import { MatchButton } from '@/components/MatchButton';
@@ -63,7 +62,6 @@ const mockUsers: User[] = [
 ];
 
 export default function HomePage() {
-  const { context } = useMiniKit();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [potentialMatches, setPotentialMatches] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,20 +73,20 @@ export default function HomePage() {
       // In a real app, this would fetch the current user's data
       const mockCurrentUser: User = {
         userId: 'current',
-        telegramId: context?.user?.id || 'unknown',
-        displayName: context?.user?.displayName || 'You',
+        telegramId: '123456789',
+        displayName: 'You',
         extractedInterests: ['React', 'TypeScript', 'Product Design', 'Startups'],
         preferences: { meetingDuration: 30 },
         timezone: 'America/Los_Angeles',
         createdAt: new Date(),
         updatedAt: new Date(),
       };
-      
+
       setCurrentUser(mockCurrentUser);
       setPotentialMatches(mockUsers);
       setLoading(false);
     }, 1000);
-  }, [context]);
+  }, []);
 
   const handleRequestMatch = async (targetUser: User) => {
     if (!currentUser) return;
@@ -149,7 +147,7 @@ export default function HomePage() {
       <Header />
 
       {/* Navigation Tabs */}
-      <div className="flex bg-surface rounded-lg p-1 shadow-card">
+      <div className="flex bg-white rounded-lg p-1 shadow-lg">
         {[
           { id: 'discover', label: 'Discover', icon: Coffee },
           { id: 'matches', label: 'Matches', icon: Users },

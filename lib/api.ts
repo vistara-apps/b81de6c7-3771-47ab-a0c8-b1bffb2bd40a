@@ -1,26 +1,39 @@
 import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1",
-  dangerouslyAllowBrowser: true,
-});
+let openai: OpenAI | null = null;
+
+function getOpenAIClient() {
+  if (!openai && process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      baseURL: "https://openrouter.ai/api/v1",
+      dangerouslyAllowBrowser: true,
+    });
+  }
+  return openai;
+}
 
 export async function extractInterestsFromProfile(bio: string, recentTweets?: string[]): Promise<string[]> {
+  const client = getOpenAIClient();
+  if (!client) {
+    // Fallback when no API key is available
+    return ['React', 'TypeScript', 'Product Design', 'Startups', 'AI'];
+  }
+
   try {
     const content = `
       Analyze this Twitter profile and extract professional interests and skills.
-      
+
       Bio: ${bio}
       ${recentTweets ? `Recent tweets: ${recentTweets.join(' | ')}` : ''}
-      
+
       Return a JSON array of 3-8 specific interests/skills that would be relevant for professional networking.
       Focus on: technologies, industries, skills, professional topics, business areas.
-      
+
       Example format: ["React", "Machine Learning", "Startup Founder", "Product Design", "Fintech"]
     `;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       messages: [{ role: 'user', content }],
       temperature: 0.3,
@@ -50,25 +63,35 @@ export async function generateConversationStarters(
   user1Interests: string[],
   user2Interests: string[]
 ): Promise<string[]> {
+  const client = getOpenAIClient();
+  if (!client) {
+    // Fallback when no API key is available
+    return [
+      "What's the most exciting project you're working on right now?",
+      "How did you get started in your field?",
+      "What's one trend in your industry that you're excited about?",
+    ];
+  }
+
   try {
-    const commonInterests = user1Interests.filter(interest => 
+    const commonInterests = user1Interests.filter(interest =>
       user2Interests.includes(interest)
     );
 
     const content = `
       Generate 3 conversation starters for two professionals meeting for virtual coffee.
-      
+
       Person 1 interests: ${user1Interests.join(', ')}
       Person 2 interests: ${user2Interests.join(', ')}
       Common interests: ${commonInterests.join(', ')}
-      
+
       Create engaging, specific questions that help them connect professionally.
       Focus on their shared interests and potential collaboration opportunities.
-      
+
       Return as JSON array of strings.
     `;
 
-    const response = await openai.chat.completions.create({
+    const response = await client.chat.completions.create({
       model: 'google/gemini-2.0-flash-001',
       messages: [{ role: 'user', content }],
       temperature: 0.7,
