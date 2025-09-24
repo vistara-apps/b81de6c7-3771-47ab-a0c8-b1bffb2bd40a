@@ -1,0 +1,30 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "1",
+    "name": "CircleUp",
+    "subtitle": "Built with Zara",
+    "description": "CircleUp is a Base Mini App built with Zara.",
+    "iconUrl": "https://0co.to/images/zara-2.png",
+    "homeUrl": "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app",
+    "splashImageUrl": "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app/splash.png",
+    "splashBackgroundColor": "#000000",
+    "heroImageUrl": "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app/image.png",
+    "tagline": "CircleUp",
+    "screenshotUrls": [
+      "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app/screenshot.png",
+      "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app/screenshot.png"
+    ],
+    "primaryCategory": "social",
+    "tags": [
+      "base",
+      "miniapp",
+      "onchainkit"
+    ],
+    "webhookUrl": "https://b81de6c7377147aba0c8b1bffb2bd40a-0zua.vercel.app/api/webhook"
+  }
+}

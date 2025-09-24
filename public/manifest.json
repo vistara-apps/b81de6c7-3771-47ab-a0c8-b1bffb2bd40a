@@ -1,0 +1,14 @@
+{
+  "name": "CircleUp",
+  "description": "CircleUp is a Base Mini App built with Zara.",
+  "image": "https://dummyimage.com/1200x628/0a0b0d/ffffff.png&text=OG",
+  "external_url": "https://b81de6c7-3771-47ab-a0c8-b1bffb2bd40a.vercel.app",
+  "properties": {
+    "app": {
+      "name": "CircleUp",
+      "description": "CircleUp is a Base Mini App built with Zara.",
+      "url": "https://b81de6c7-3771-47ab-a0c8-b1bffb2bd40a.vercel.app",
+      "icon": "https://0co.to/images/zara-2.png"
+    }
+  }
+}
